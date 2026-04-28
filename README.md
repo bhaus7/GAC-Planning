@@ -1,3 +1,4 @@
+#GAC-Planning README
 This is meant to be an app for me to plan out my GAC tournaments in SWGOH.
 
 
