@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GAC Planner">
+<meta name="theme-color" content="#0d0f14">
+<title>GAC Attack Planner</title>
+<style>
+  /* ── Reset & Base ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:        #0d0f14;
+    --bg2:       #151821;
+    --bg3:       #1c2030;
+    --bg4:       #242840;
+    --border:    rgba(255,255,255,0.08);
+    --border2:   rgba(255,255,255,0.14);
+    --text:      #e8eaf2;
+    --text2:     #8b90a8;
+    --text3:     #555a72;
+    --accent:    #4f8ef7;
+    --accent2:   #2563cc;
+    --green:     #2dd07a;
+    --green-bg:  rgba(45,208,122,0.10);
+    --amber:     #f5a623;
+    --amber-bg:  rgba(245,166,35,0.10);
+    --red:       #f75050;
+    --red-bg:    rgba(247,80,80,0.10);
+    --radius:    10px;
+    --radius-lg: 14px;
+    --font:      -apple-system, 'SF Pro Display', 'Segoe UI', sans-serif;
+  }
+
+  html { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 16px; }
+  body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom, 24px); }
+
+  /* ── Layout ── */
+  .shell { max-width: 680px; margin: 0 auto; padding: 0 16px 40px; }
+
+  /* ── Header ── */
+  .app-header {
+    padding: 52px 0 28px;
+    border-bottom: 0.5px solid var(--border);
+    margin-bottom: 24px;
+  }
+  .app-header .eyebrow {
+    font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--accent); font-weight: 500; margin-bottom: 8px;
+  }
+  .app-header h1 { font-size: 26px; font-weight: 600; letter-spacing: -0.5px; color: var(--text); }
+  .app-header p  { font-size: 13px; color: var(--text2); margin-top: 6px; line-height: 1.6; }
+
+  /* ── Status bar ── */
+  .status-bar {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 12px; padding: 10px 14px;
+    border-radius: var(--radius); margin-bottom: 20px;
+    border: 0.5px solid var(--border);
+  }
+  .status-bar.loading { background: var(--bg2); color: var(--text2); }
+  .status-bar.success { background: var(--green-bg); color: var(--green); border-color: rgba(45,208,122,0.2); }
+  .status-bar.error   { background: var(--red-bg);   color: var(--red);   border-color: rgba(247,80,80,0.2); }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+  .status-msg { flex: 1; }
+  .refresh-btn {
+    font-size: 11px; padding: 4px 10px; border-radius: 6px;
+    background: transparent; border: 0.5px solid currentColor;
+    color: inherit; cursor: pointer; opacity: 0.8;
+  }
+  .refresh-btn:hover { opacity: 1; }
+
+  /* ── Section label ── */
+  .section-label {
+    font-size: 10px; font-weight: 600; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--text3);
+    margin-bottom: 10px; margin-top: 24px;
+  }
+
+  /* ── Card ── */
+  .card {
+    background: var(--bg2); border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg); padding: 16px 18px; margin-bottom: 14px;
+  }
+  .card-title { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+  .card-hint  { font-size: 12px; color: var(--text2); line-height: 1.55; margin-bottom: 12px; }
+
+  /* ── Roster preview ── */
+  .roster-stats { font-size: 12px; color: var(--text2); margin-bottom: 10px; }
+  .roster-preview { display: flex; flex-wrap: wrap; gap: 6px; max-height: 130px; overflow-y: auto; }
+  .char-tag {
+    font-size: 11px; padding: 3px 9px; border-radius: 99px;
+    border: 0.5px solid var(--border2); color: var(--text2);
+    background: var(--bg3); white-space: nowrap;
+  }
+  .char-tag.relic  { background: var(--green-bg); color: var(--green);  border-color: rgba(45,208,122,0.25); }
+  .char-tag.high   { background: var(--amber-bg); color: var(--amber);  border-color: rgba(245,166,35,0.25); }
+
+  /* ── Squad input ── */
+  .squad-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+  .squad-row  { display: flex; gap: 8px; align-items: center; }
+  .squad-input {
+    flex: 1; font-size: 13px; padding: 10px 12px;
+    border: 0.5px solid var(--border2); border-radius: var(--radius);
+    background: var(--bg3); color: var(--text);
+    font-family: var(--font); transition: border-color 0.15s;
+  }
+  .squad-input::placeholder { color: var(--text3); }
+  .squad-input:focus { outline: none; border-color: var(--accent); }
+  .remove-btn {
+    width: 32px; height: 32px; border-radius: var(--radius);
+    border: 0.5px solid var(--border2); background: transparent;
+    color: var(--text3); cursor: pointer; font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; transition: all 0.15s;
+  }
+  .remove-btn:hover { background: var(--red-bg); color: var(--red); border-color: rgba(247,80,80,0.3); }
+  .add-squad-btn {
+    width: 100%; font-size: 13px; color: var(--text2);
+    background: transparent; border: 0.5px dashed var(--border2);
+    border-radius: var(--radius); padding: 9px 12px; cursor: pointer;
+    text-align: left; transition: all 0.15s;
+  }
+  .add-squad-btn:hover { background: var(--bg3); color: var(--text); }
+
+  /* ── Analyze button ── */
+  .analyze-btn {
+    width: 100%; padding: 14px; font-size: 15px; font-weight: 500;
+    background: var(--accent); border: none; border-radius: var(--radius-lg);
+    color: #fff; cursor: pointer; letter-spacing: -0.2px;
+    transition: background 0.15s, transform 0.1s;
+    margin-top: 4px;
+  }
+  .analyze-btn:hover   { background: var(--accent2); }
+  .analyze-btn:active  { transform: scale(0.98); }
+  .analyze-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+  /* ── Results ── */
+  .results-area { margin-top: 28px; }
+  .result-card {
+    background: var(--bg2); border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg); padding: 18px;
+  }
+  .result-text {
+    font-size: 13px; line-height: 1.85; color: var(--text);
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .result-text.thinking { color: var(--text2); font-style: italic; }
+
+  /* ── Divider ── */
+  hr { border: none; border-top: 0.5px solid var(--border); margin: 24px 0; }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
+
+  /* ── Mobile tweaks ── */
+  @media (max-width: 480px) {
+    .app-header { padding-top: 36px; }
+    .app-header h1 { font-size: 22px; }
+    .card { padding: 14px 14px; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <header class="app-header">
+    <div class="eyebrow">SWGOH · Grand Arena Championship</div>
+    <h1>GAC Attack Planner</h1>
+    <p>Your roster loads live from your Google Sheet. Add the enemy squads you need to beat and get AI-powered counter recommendations.</p>
+  </header>
+
+  <!-- Status bar -->
+  <div class="status-bar loading" id="status-bar">
+    <span class="status-dot"></span>
+    <span class="status-msg" id="status-msg">Loading your roster from Google Sheets…</span>
+    <button class="refresh-btn" onclick="loadRoster()">Refresh</button>
+  </div>
+
+  <!-- Roster preview (hidden until loaded) -->
+  <div class="card" id="roster-card" style="display:none">
+    <div class="card-title">Your roster <span id="roster-count" style="font-weight:400;font-size:12px;color:var(--text2)"></span></div>
+    <div class="card-hint">
+      <span style="color:var(--amber)">Amber</span> = R7+ · <span style="color:var(--green)">Green</span> = Relic · Gray = Gear level. Sorted by power.
+    </div>
+    <div class="roster-stats" id="roster-stats"></div>
+    <div class="roster-preview" id="roster-preview"></div>
+  </div>
+
+  <!-- Enemy squads -->
+  <div class="card">
+    <div class="card-title">Enemy squads to beat</div>
+    <div class="card-hint">One squad per row. You can type just the leader name, or the full squad if you know it. Add as many as you need for your whole attack phase.</div>
+    <div class="squad-list" id="squad-list"></div>
+    <button class="add-squad-btn" onclick="addSquadRow()">+ Add another enemy squad</button>
+  </div>
+
+  <!-- Analyze -->
+  <button class="analyze-btn" id="analyze-btn" onclick="analyzeCounters()">
+    Analyze counters
+  </button>
+
+  <!-- Results -->
+  <div class="results-area" id="results-area" style="display:none">
+    <hr>
+    <div class="section-label">Counter recommendations</div>
+    <div class="result-card">
+      <div class="result-text thinking" id="result-text">Thinking…</div>
+    </div>
+  </div>
+
+</div><!-- /shell -->
+
+<script>
+// ─────────────────────────────────────────────
+//  CONFIG — your Google Sheet CSV URL
+// ─────────────────────────────────────────────
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQlasCJnUxDxFav6ueF4WyvbpVUBk2gw5M-R22keXasnGezDHn8CQhDB7NdY8JpSV9jXZJTpbkgFYFO/pub?gid=313341909&single=true&output=csv';
+
+// ─────────────────────────────────────────────
+//  ROSTER STATE
+// ─────────────────────────────────────────────
+let rosterData = [];
+
+// ─────────────────────────────────────────────
+//  CSV PARSER
+//  Handles quoted fields, commas inside quotes
+// ─────────────────────────────────────────────
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  const headers = splitCSVLine(lines[0]);
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const cols = splitCSVLine(lines[i]);
+    const row = {};
+    headers.forEach((h, idx) => {
+      row[h.trim()] = (cols[idx] || '').trim();
+    });
+    rows.push(row);
+  }
+  return rows;
+}
+
+function splitCSVLine(line) {
+  const result = [];
+  let cur = '', inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') { inQ = !inQ; }
+    else if (ch === ',' && !inQ) { result.push(cur); cur = ''; }
+    else { cur += ch; }
+  }
+  result.push(cur);
+  return result.map(s => s.replace(/^"|"$/g, '').trim());
+}
+
+// ─────────────────────────────────────────────
+//  STATUS BAR
+// ─────────────────────────────────────────────
+function setStatus(type, msg) {
+  const bar = document.getElementById('status-bar');
+  bar.className = 'status-bar ' + type;
+  document.getElementById('status-msg').textContent = msg;
+}
+
+// ─────────────────────────────────────────────
+//  LOAD ROSTER FROM GOOGLE SHEETS
+// ─────────────────────────────────────────────
+async function loadRoster() {
+  setStatus('loading', 'Loading your roster from Google Sheets…');
+  document.getElementById('roster-card').style.display = 'none';
+
+  try {
+    // Fetch the published CSV
+    const res = await fetch(CSV_URL + '&cachebust=' + Date.now());
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    const rows = parseCSV(text);
+
+    // Filter to only unlocked characters (✅ or TRUE or 1)
+    rosterData = rows
+      .filter(r => {
+        const u = (r['Unlocked'] || r['unlocked'] || '').toLowerCase();
+        return u.includes('✅') || u === 'true' || u === '1' || u.includes('true');
+      })
+      .map(r => ({
+        name:  r['Character'] || r['character'] || '',
+        relic: parseInt(r['Current Relic Level'] || '0') || 0,
+        gear:  parseInt(r['Current Gear Level']  || '0') || 0,
+        stars: parseInt(r['Current Stars']        || '0') || 0,
+        tier:  r['Tier'] || ''
+      }))
+      .filter(r => r.name.length > 0);
+
+    if (rosterData.length === 0) throw new Error('No unlocked characters found — check your sheet columns');
+
+    // Stats
+    const relicCount    = rosterData.filter(r => r.relic > 0).length;
+    const highRelicCount = rosterData.filter(r => r.relic >= 7).length;
+    document.getElementById('roster-count').textContent = `(${rosterData.length} characters)`;
+    document.getElementById('roster-stats').textContent =
+      `${relicCount} at relic tier  ·  ${highRelicCount} at R7 or higher`;
+
+    // Render tags — sorted by relic desc, then gear desc
+    const sorted = [...rosterData].sort((a,b) => (b.relic - a.relic) || (b.gear - a.gear));
+    const preview = document.getElementById('roster-preview');
+    preview.innerHTML = '';
+    sorted.forEach(c => {
+      const tag = document.createElement('span');
+      const isHighRelic = c.relic >= 7;
+      const isRelic     = c.relic > 0 && !isHighRelic;
+      tag.className = 'char-tag' + (isHighRelic ? ' high' : isRelic ? ' relic' : '');
+      tag.textContent = c.relic > 0 ? `${c.name} R${c.relic}` : `${c.name} G${c.gear}`;
+      preview.appendChild(tag);
+    });
+
+    document.getElementById('roster-card').style.display = 'block';
+    setStatus('success', `Roster loaded — ${rosterData.length} characters ready`);
+
+  } catch (e) {
+    setStatus('error', 'Could not load roster: ' + e.message);
+  }
+}
+
+// ─────────────────────────────────────────────
+//  SQUAD ROW MANAGEMENT
+// ─────────────────────────────────────────────
+function addSquadRow(val = '') {
+  const list = document.getElementById('squad-list');
+  const row  = document.createElement('div');
+  row.className = 'squad-row';
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'squad-input';
+  input.placeholder = 'e.g. Jabba the Hutt, Boba Fett, Skiff Guard, Gamorrean, Rancor';
+  input.value = val;
+
+  const removeBtn = document.createElement('button');
+  removeBtn.className = 'remove-btn';
+  removeBtn.innerHTML = '&times;';
+  removeBtn.title = 'Remove squad';
+  removeBtn.onclick = () => {
+    row.remove();
+    if (document.getElementById('squad-list').children.length === 0) addSquadRow();
+  };
+
+  row.appendChild(input);
+  row.appendChild(removeBtn);
+  list.appendChild(row);
+  input.focus();
+}
+
+// ─────────────────────────────────────────────
+//  ANALYZE COUNTERS (calls Claude API)
+// ─────────────────────────────────────────────
+async function analyzeCounters() {
+  const squads = Array.from(document.querySelectorAll('.squad-input'))
+    .map(i => i.value.trim()).filter(Boolean);
+
+  if (squads.length === 0) {
+    alert('Please add at least one enemy squad first.');
+    return;
+  }
+  if (rosterData.length === 0) {
+    alert('Your roster hasn\'t loaded yet. Please wait a moment or tap Refresh.');
+    return;
+  }
+
+  const btn = document.getElementById('analyze-btn');
+  btn.disabled = true;
+  btn.textContent = 'Analyzing…';
+
+  const resultsArea = document.getElementById('results-area');
+  const resultEl    = document.getElementById('result-text');
+  resultsArea.style.display = 'block';
+  resultEl.className = 'result-text thinking';
+  resultEl.textContent = 'Consulting the GAC meta database…';
+
+  // Build roster summary string for the prompt
+  // Sorted best first so the AI sees top teams prominently
+  const rosterSummary = [...rosterData]
+    .sort((a,b) => (b.relic - a.relic) || (b.gear - a.gear))
+    .map(c => c.relic > 0 ? `${c.name} (R${c.relic})` : `${c.name} (G${c.gear})`)
+    .join(', ');
+
+  const prompt = `You are an expert Star Wars Galaxy of Heroes (SWGoH) Grand Arena Championship (GAC) advisor with deep knowledge of the current meta, squad synergies, and counter strategies.
+
+PLAYER ROSTER — format is CharacterName (R# = relic tier, G# = gear level):
+${rosterSummary}
+
+ENEMY SQUADS THE PLAYER NEEDS TO DEFEAT TODAY:
+${squads.map((s, i) => `${i + 1}. ${s}`).join('\n')}
+
+For EACH enemy squad above, provide:
+1. A 1-2 sentence summary of why that squad is dangerous and its win condition
+2. The best counter from the player's actual roster — be SPECIFIC, name the exact characters and their relic levels from the list above
+3. A brief battle strategy tip: key abilities to use, what order to act, what to watch out for
+4. Banner efficiency note — will this counter likely get 100 banners, or is it a risky fight?
+
+If the player clearly lacks a strong counter for a squad, be honest about it and suggest a 2-attempt approach or the least-bad option available.
+
+Important: Only recommend characters that appear in the player's roster above. Reference their relic levels specifically — R7+ characters hit significantly harder and survive longer than lower relic tiers.
+
+Keep your tone practical and direct, like advice from an experienced GAC player.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1500,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    const data = await res.json();
+
+    if (data.content && data.content[0] && data.content[0].text) {
+      resultEl.className = 'result-text';
+      resultEl.textContent = data.content[0].text;
+    } else if (data.error) {
+      throw new Error(data.error.message || 'API error');
+    } else {
+      throw new Error('Unexpected response format');
+    }
+
+  } catch (e) {
+    resultEl.className = 'result-text';
+    resultEl.textContent = 'Something went wrong: ' + e.message + '\n\nPlease try again.';
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Analyze counters';
+  resultsArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ─────────────────────────────────────────────
+//  INIT
+// ─────────────────────────────────────────────
+addSquadRow();
+addSquadRow();
+loadRoster();
+</script>
+</body>
+</html>
